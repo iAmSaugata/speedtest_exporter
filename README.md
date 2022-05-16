@@ -64,12 +64,14 @@ This exporter locks (one concurrent scrape at a time) as it conducts the speedte
 
 ```yaml
 ...
-scrape_configs
-    - job_name: speedtest
-      scrape_interval: 60m
-      scrape_timeout:  60s
-      static_configs:
-        - targets: ['localhost:9090']
+scrape_configs:
+- job_name: 'speedtest_exporter'
+  scrape_interval: 60m
+  scrape_timeout:  70s
+  metrics_path: /metrics
+  static_configs:
+    - targets: ['YourSpeedTestServerIPorHost:9090']
+
 ...
 ```
 
