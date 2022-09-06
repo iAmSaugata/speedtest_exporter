@@ -1,0 +1,119 @@
+#Name : raspberrypi-docker-monitor
+version: "3.5"
+services:
+  cadvisor:
+    command:
+    - '--docker_only=true'
+    - '--housekeeping_interval=30s'
+    - '--disable_metrics=accelerator,cpu_topology,disk,memory_numa,tcp,udp,percpu,sched,process,hugetlb,referenced_memory,resctrl,cpuset,advtcp,memory_numa'
+    - '--store_container_labels=false'
+    - '--event_storage_event_limit=default=0'
+    - '--event_storage_age_limit=default=0'
+    container_name: monitoring-cadvisor
+    devices:
+      - '/dev/kmsg:/dev/kmsg'
+    expose:
+      - '8080'
+    hostname: rpi-cadvisor
+    image: zcube/cadvisor:latest
+    ipc: shareable
+    networks:
+      backend:
+    privileged: true
+    restart: unless-stopped
+    security_opt:
+      - 'label=disable'
+    volumes:
+      - '/:/rootfs:ro'
+      - '/var/run:/var/run:rw'
+      - '/sys:/sys:ro'
+      - '/var/lib/docker/:/var/lib/docker:ro'
+      - '/etc/machine-id:/etc/machine-id:ro'
+      # Time Zone Sync
+      - '/etc/timezone:/etc/timezone:ro'
+      - '/etc/localtime:/etc/localtime:ro'
+      
+  grafana:
+    container_name: monitoring-grafana
+    environment:
+      - 'GF_USERS_ALLOW_SIGN_UP=false'
+      - 'GF_PATHS_CONFIG=/etc/grafana/grafana.ini'
+      - 'GF_PATHS_DATA=/var/lib/grafana'
+      - 'GF_PATHS_HOME=/usr/share/grafana'
+      - 'GF_PATHS_LOGS=/var/log/grafana'
+      - 'GF_PATHS_PLUGINS=/var/lib/grafana/plugins'
+      - 'GF_PATHS_PROVISIONING=/etc/grafana/provisioning'
+    image: grafana/grafana:main
+    networks:
+      backend:
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+    volumes:
+      # to be modified depending on your needs
+      - '/portainer/Files/AppData/Config/grafana/data:/var/lib/grafana'
+      - '/portainer/Files/AppData/Config/grafana/grafana.ini:/etc/grafana/grafana.ini'
+      - '/portainer/Files/AppData/Config/grafana/provisioning:/etc/grafana/provisioning'
+      # Time Zone Sync
+      - '/etc/timezone:/etc/timezone:ro'
+      - '/etc/localtime:/etc/localtime:ro'
+      
+  node-exporter:
+    container_name: monitoring-node-exporter
+    expose:
+      - '9100'
+    hostname: rpi-exporter
+    image: prom/node-exporter:latest
+    networks:
+      backend:
+    restart: unless-stopped
+    volumes:
+      # Time Zone Sync
+      - '/etc/timezone:/etc/timezone:ro'
+      - '/etc/localtime:/etc/localtime:ro'
+
+  speedtest-exporter:
+    container_name: monitoring-speedtest-exporter
+    ports:
+      - 9292:9090
+    hostname: rpi-exporter
+    image: iamsaugata/speedtest-exporter:latest
+    mem_limit: 350m
+    mem_reservation: 300m
+    networks:
+      backend:
+    restart: unless-stopped
+    volumes:
+      # Time Zone Sync
+      - '/etc/timezone:/etc/timezone:ro'
+      - '/etc/localtime:/etc/localtime:ro'
+
+  prometheus:
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}'
+    container_name: monitoring-prometheus
+    expose:
+      - '9090'
+    hostname: rpi-prom
+    image: prom/prometheus:latest
+    user: root
+    networks:
+      backend:
+    restart: unless-stopped
+    volumes:
+      # to be modified depending on your needs
+      - '/portainer/Files/AppData/Config/prometheus/data:/prometheus'
+      - '/portainer/Files/AppData/Config/prometheus/config:/etc/prometheus/'
+      # Time Zone Sync
+      - '/etc/timezone:/etc/timezone:ro'
+      - '/etc/localtime:/etc/localtime:ro'
+    links:
+      - 'cadvisor:cadvisor'
+      - 'node-exporter:node-exporter'
+
+networks:
+  backend:
+    driver_opts:
+      com.docker.network.bridge.name: br_rpimonitor
