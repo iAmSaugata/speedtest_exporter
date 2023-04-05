@@ -46,4 +46,9 @@ COPY --from=builder /speedtest_exporter /usr/bin/speedtest_exporter
 
 EXPOSE 9090
 
-ENTRYPOINT [ "/usr/bin/speedtest_exporter" ]
+ENV LISTEN_PORT=""
+ENV FALLBACK=""
+ENV SERVER_ID=""
+
+ENTRYPOINT [ "/usr/bin/speedtest_exporter", "-port ${LISTEN_PORT:-9090}", "-server_id ${SERVER_ID:--1}", "${FALLBACK:--server_fallback}" ]
+#ENTRYPOINT [ "/usr/bin/speedtest_exporter" ]
