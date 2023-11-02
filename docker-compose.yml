@@ -76,7 +76,6 @@ services:
     container_name: monitoring-speedtest-exporter
     ports:
       - 9292:9090
-    hostname: rpi-exporter
     image: iamsaugata/speedtest-exporter:latest
     mem_limit: 350m
     mem_reservation: 300m
